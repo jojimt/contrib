@@ -25,6 +25,7 @@ ETCD_DATA_DIR={{ etcd_data_dir }}
 {% if etcd_proxy_mode == "on" %}
 ETCD_INITIAL_CLUSTER={{ initial_cluster() }}
 ETCD_PROXY="on"
+ETCD_LISTEN_CLIENT_URLS="{{ etcd_listen_client_urls }}"
 {% elif groups[etcd_peers_group] and groups[etcd_peers_group] | length > 0 %}
 #[cluster]
 ETCD_INITIAL_ADVERTISE_PEER_URLS={{ etcd_initial_advertise_peer_urls }}
