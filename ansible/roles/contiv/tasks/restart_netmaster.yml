@@ -27,7 +27,11 @@
   service: name=netmaster state=started
 
 - name: wait for netmaster
-  pause: seconds=60
+  action: shell netctl tenant ls
+  register: netctl_res
+  until: netctl_res.stdout.find("default") != -1
+  retries: 7
+  delay: 10
 
 - include: aci.yml
 
