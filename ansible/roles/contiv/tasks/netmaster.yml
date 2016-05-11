@@ -49,4 +49,4 @@
   when: contiv_fabric_mode == "aci"
 
 - include: default_network.yml
-  when: contiv_default_network == true
+  when: contiv_default_network == "true"
