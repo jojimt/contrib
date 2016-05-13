@@ -28,6 +28,7 @@
   delay: 10
 
 - include: aci.yml
+  when: contiv_fabric_mode == "aci"
 
 - name: configure network
   shell: nw_setup.sh
