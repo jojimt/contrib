@@ -11,6 +11,9 @@ contiv_control_ip: "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['add
 # This is the path where contiv binaries are kept
 contiv_bin_path: ~/go/bin
 
+# Specifies fabric mode (aci | default)
+contiv_fabric_mode: aci
+
 # Specifies routed mode vs bridged mode for networking (bridge | routing)
 # if you are using an external router for all routing, you should select bridge here
 contiv_fwd_mode: routing
