@@ -21,7 +21,7 @@
 
 - name: get openstack kilo rpm
   get_url:
-    url: https://repos.fedorapeople.org/repos/openstack/openstack-kilo/rdo-release-kilo-1.noarch.rpm
+    url: https://repos.fedorapeople.org/repos/openstack/openstack-kilo/rdo-release-kilo-2.noarch.rpm
     dest: /tmp/rdo-release-kilo-1.noarch.rpm
     validate_certs: False
   environment:
