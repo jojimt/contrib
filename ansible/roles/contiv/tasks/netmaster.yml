@@ -14,11 +14,14 @@
 - name: copy systemd units for netmaster
   copy: src=netmaster.service dest=/etc/systemd/system/netmaster.service
 
+- name: cleanup old netmaster host alias
+  lineinfile: dest=/etc/hosts regexp=.*netmaster$ state=absent
+
 - name: setup netmaster host alias
   lineinfile: regexp=.*netmaster$ dest=/etc/hosts line="{{ contiv_service_vip }} netmaster"
 
 - name: restart netmaster
-  service: name=netmaster state=restarted
+  shell: systemctl daemon-reload && systemctl start netmaster
 
 - name: wait for netmaster
   action: shell netctl tenant ls

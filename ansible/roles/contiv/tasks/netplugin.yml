@@ -70,11 +70,14 @@
 - name: copy systemd units for netplugin
   copy: src=netplugin.service dest=/etc/systemd/system/netplugin.service
 
+- name: cleanup old netmaster host alias
+  lineinfile: dest=/etc/hosts regexp=.*netmaster$ state=absent
+
 - name: setup netmaster host alias
   lineinfile: dest=/etc/hosts line="{{ contiv_service_vip }} netmaster"
 
 - name: restart netplugin
-  service: name=netplugin state=restarted
+  shell: systemctl daemon-reload && systemctl start netplugin
 
 - name: restart kubelet
   service: name=kubelet state=restarted

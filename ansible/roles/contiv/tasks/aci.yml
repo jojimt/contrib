@@ -18,6 +18,6 @@
   run_once: true
 
 - name: start aci-gw container
-  service: name=aci-gw state=started
+  shell: systemctl daemon-reload && systemctl start aci-gw
   run_once: true
 
