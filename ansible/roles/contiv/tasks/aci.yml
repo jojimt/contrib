@@ -16,8 +16,13 @@
 - name: copy systemd units for aci-gw
   copy: src=aci-gw.service dest=/etc/systemd/system/aci-gw.service
   run_once: true
+  register: copy_result
+
+- name: reload systemd
+  command: systemctl --system daemon-reload
+  when: copy_result.changed
 
 - name: start aci-gw container
-  shell: systemctl daemon-reload && systemctl start aci-gw
+  service: name=aci-gw enabled=yes state=started
   run_once: true
 
