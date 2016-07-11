@@ -22,8 +22,18 @@ KUBECTL=${KUBECTL_BIN:-/usr/local/bin/kubectl}
 ADDON_CHECK_INTERVAL_SEC=${TEST_ADDON_CHECK_INTERVAL_SEC:-600}
 
 SYSTEM_NAMESPACE=kube-system
-
 token_dir=${TOKEN_DIR:-/srv/kubernetes}
+trusty_master=${TRUSTY_MASTER:-false}
+
+function ensure_python() {
+  if ! python --version > /dev/null 2>&1; then    
+    echo "No python on the machine, will use a python image"
+    local -r PYTHON_IMAGE=python:2.7-slim-pyyaml
+    export PYTHON="docker run --interactive --rm --net=none ${PYTHON_IMAGE} python"
+  else
+    export PYTHON=python
+  fi
+}
 
 function create-kubeconfig-secret() {
   local -r token=$1
@@ -126,22 +136,53 @@ function create-resource-from-string() {
   return 1;
 }
 
+# $1 is the directory containing all of the docker images
+function load-docker-images() {
+  local success
+  local restart_docker
+  while true; do
+    success=true
+    restart_docker=false
+    for image in "$1/"*; do
+      timeout 30 docker load -i "${image}" &>/dev/null
+      rc=$?
+      if [[ "$rc" == 124 ]]; then
+        restart_docker=true
+      elif [[ "$rc" != 0 ]]; then
+        success=false
+      fi
+    done
+    if [[ "$success" == "true" ]]; then break; fi
+    if [[ "$restart_docker" == "true" ]]; then service docker restart; fi
+    sleep 15
+  done
+}
+
 # The business logic for whether a given object should be created
 # was already enforced by salt, and /etc/kubernetes/addons is the
 # managed result is of that. Start everything below that directory.
 echo "== Kubernetes addon manager started at $(date -Is) with ADDON_CHECK_INTERVAL_SEC=${ADDON_CHECK_INTERVAL_SEC} =="
 
+# Load any images that we may need. This is not needed for trusty master and
+# the way it restarts docker daemon does not work for trusty.
+if [[ "${trusty_master}" == "false" ]]; then
+  load-docker-images /srv/salt/kube-addons-images
+fi
+
+ensure_python
+
 # Load the kube-env, which has all the environment variables we care
 # about, in a flat yaml format.
 kube_env_yaml="/var/cache/kubernetes-install/kube_env.yaml"
 if [ ! -e "${kubelet_kubeconfig_file}" ]; then
-  eval $(python -c '''
+  eval $(${PYTHON} -c '''
 import pipes,sys,yaml
 
 for k,v in yaml.load(sys.stdin).iteritems():
-  print "readonly {var}={value}".format(var = k, value = pipes.quote(str(v)))
+  print("readonly {var}={value}".format(var = k, value = pipes.quote(str(v))))
 ''' < "${kube_env_yaml}")
 fi
+
 
 # Create the namespace that will be used to host the cluster-level add-ons.
 start_addon /etc/kubernetes/addons/namespace.yaml 100 10 "" &
@@ -150,7 +191,7 @@ start_addon /etc/kubernetes/addons/namespace.yaml 100 10 "" &
 token_found=""
 while [ -z "${token_found}" ]; do
   sleep .5
-  token_found=$(${KUBECTL} get --namespace="${SYSTEM_NAMESPACE}" serviceaccount default -o template -t "{{with index .secrets 0}}{{.name}}{{end}}" || true)
+  token_found=$(${KUBECTL} get --namespace="${SYSTEM_NAMESPACE}" serviceaccount default -o go-template="{{with index .secrets 0}}{{.name}}{{end}}" || true)
 done
 
 echo "== default service account in the ${SYSTEM_NAMESPACE} namespace has token ${token_found} =="
@@ -182,7 +223,7 @@ done < "${token_dir}/known_tokens.csv"
 # are defined in a namespace other than default, we should still create the limits for the
 # default namespace.
 for obj in $(find /etc/kubernetes/admission-controls \( -name \*.yaml -o -name \*.json \)); do
-  start_addon ${obj} 100 10 default &
+  start_addon "${obj}" 100 10 default &
   echo "++ obj ${obj} is created ++"
 done
 

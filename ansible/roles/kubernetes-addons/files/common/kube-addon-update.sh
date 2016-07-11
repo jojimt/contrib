@@ -98,7 +98,7 @@ function log() {
 function get-object-kind-from-file() {
     # prints to stdout, so log cannot be used
     #WARNING: only yaml is supported
-    cat $1 | python -c '''
+    cat $1 | ${PYTHON} -c '''
 try:
         import pipes,sys,yaml
         y = yaml.load(sys.stdin)
@@ -120,7 +120,7 @@ function get-object-nsname-from-file() {
     # prints to stdout, so log cannot be used
     #WARNING: only yaml is supported
     #addons that do not specify a namespace are assumed to be in "default".
-    cat $1 | python -c '''
+    cat $1 | ${PYTHON} -c '''
 try:
         import pipes,sys,yaml
         y = yaml.load(sys.stdin)
@@ -164,7 +164,11 @@ function wait-for-jobs() {
     local rv=0
     local pid
     for pid in $(jobs -p); do
-        wait ${pid} || (rv=1; log ERR "error in pid ${pid}")
+        wait ${pid}
+        if [[ $? -ne 0 ]]; then
+            rv=1;
+            log ERR "error in pid ${pid}"
+        fi
         log DB2 "pid ${pid} completed, current error code: ${rv}"
     done
     return ${rv}
@@ -194,7 +198,7 @@ function run-until-success() {
 # returns a list of <namespace>/<name> pairs (nsnames)
 function get-addon-nsnames-from-server() {
     local -r obj_type=$1
-    "${KUBECTL}" get "${obj_type}" --all-namespaces -o template -t "{{range.items}}{{.metadata.namespace}}/{{.metadata.name}} {{end}}" --api-version=v1 -l kubernetes.io/cluster-service=true
+    "${KUBECTL}" get "${obj_type}" --all-namespaces -o go-template="{{range.items}}{{.metadata.namespace}}/{{.metadata.name}} {{end}}" --api-version=v1 -l kubernetes.io/cluster-service=true
 }
 
 # returns the characters after the last separator (including)
@@ -345,6 +349,12 @@ function match-objects() {
     new_files=""
 
     addon_nsnames_on_server=$(get-addon-nsnames-from-server "${obj_type}")
+    # if the api server is unavailable then abandon the update for this cycle 
+    if [[ $? -ne 0 ]]; then
+        log ERR "unable to query ${obj_type} - exiting"
+        exit 1
+    fi
+
     addon_paths_in_files=$(get-addon-paths-from-disk "${addon_dir}" "${obj_type}")
 
     log DB2 "addon_nsnames_on_server=${addon_nsnames_on_server}"
@@ -465,13 +475,16 @@ function update-addons() {
     local -r addon_path=$1
     # be careful, reconcile-objects uses global variables
     reconcile-objects ${addon_path} ReplicationController "-" &
+    reconcile-objects ${addon_path} Deployment "-" &
 
-    # We don't expect service names to be versioned, so
-    # we match entire name, ignoring version suffix.
+    # We don't expect names to be versioned for the following kinds, so
+    # we match the entire name, ignoring version suffix.
     # That's why we pass an empty string as the version separator.
-    # If the service description differs on disk, the service should be recreated.
+    # If the description differs on disk, the object should be recreated.
     # This is not implemented in this version.
     reconcile-objects ${addon_path} Service "" &
+    reconcile-objects ${addon_path} PersistentVolume "" &
+    reconcile-objects ${addon_path} PersistentVolumeClaim "" &
 
     wait-for-jobs
     if [[ $? -eq 0 ]]; then

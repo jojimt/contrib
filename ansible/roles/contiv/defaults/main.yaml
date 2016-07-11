@@ -11,6 +11,10 @@ contiv_control_ip: "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['add
 # This is the path where contiv binaries are kept
 contiv_bin_path: ~/go/bin
 
+contiv_default_subnet: "20.1.1.0/24"
+contiv_poc_subnet: "21.1.1.0/24"
+contiv_demo: False
+
 # Specifies fabric mode (aci | default)
 contiv_fabric_mode: aci
 
