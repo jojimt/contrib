@@ -10,12 +10,20 @@
 
 - name: copy systemd units for netmaster
   copy: src=netmaster.service dest=/etc/systemd/system/netmaster.service
+  register: copy_result
+
+- name: reload systemd
+  command: systemctl --system daemon-reload
+  when: copy_result.changed
+
+- name: cleanup old netmaster host alias
+  lineinfile: dest=/etc/hosts regexp=.*netmaster$ state=absent
 
 - name: setup netmaster host alias
   lineinfile: regexp=.*netmaster$ dest=/etc/hosts line="{{ contiv_service_vip }} netmaster"
 
 - name: restart netmaster
-  service: name=netmaster state=restarted
+  service: name=netmaster enabled=yes state=restarted
 
 - include: aci.yml
   when: contiv_fabric_mode == "aci"
