@@ -7,12 +7,18 @@
 
 - name: copy environment file for netmaster
   copy: src=netmaster.env dest=/etc/default/netmaster
+  register: nm_env
 
 - name: copy systemd units for netmaster
   copy: src=netmaster.service dest=/etc/systemd/system/netmaster.service
+  register: nm_svc
 
 - name: setup netmaster host alias
   lineinfile: regexp=.*netmaster$ dest=/etc/hosts line="{{ contiv_service_vip }} netmaster"
+
+- name: reload daemon
+  shell: systemctl daemon-reload
+  when: nm_svc.changed or nm_env.changed
 
 - name: restart netmaster
   service: name=netmaster state=restarted

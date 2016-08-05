@@ -11,11 +11,17 @@
 
 - name: copy shell script for starting aci-gw
   template: src=aci_gw.j2 dest=/usr/bin/aci_gw.sh mode=u=rwx,g=rx,o=rx
+  register: aci_env
   run_once: true
 
 - name: copy systemd units for aci-gw
   copy: src=aci-gw.service dest=/etc/systemd/system/aci-gw.service
+  register: aci_svc
   run_once: true
+
+- name: reload daemon
+  shell: systemctl daemon-reload
+  when: aci_svc.changed or aci_env.changed
 
 - name: start aci-gw container
   service: name=aci-gw state=started
