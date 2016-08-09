@@ -9,6 +9,10 @@
   action: shell netctl net ls
   register: net_result
 
+- name: Admin | Configure netmaster
+  shell: netctl global set --fwd-mode {{ contiv_fwd_mode }}
+  when: net_result.stdout.find("default-net") == -1
+
 - name: Contiv | Create default-net
   shell: netctl net create --subnet={{contiv_default_subnet}} default-net
   when: net_result.stdout.find("default-net") == -1

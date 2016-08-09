@@ -16,6 +16,7 @@
 
 - name: restart proxy
   service: name=kube-proxy state=restarted
+  when: networking != "contiv"
 
 - name: restart iptables
   service: name=iptables state=restarted
