@@ -1,2 +1,9 @@
+{% set modek8s = ' -plugin-mode kubernetes' %}
+{% set np_args = '-vtep-ip ' ~ contiv_control_ip ~ ' -ctrl-ip ' ~ contiv_control_ip ~ modek8s %}
+
 {# If an interface is specified for netplugin, use it #}
-NETPLUGIN_ARGS='-vlan-if {{contiv_network_if}} -vtep-ip {{contiv_control_ip}} -ctrl-ip {{contiv_control_ip}} -plugin-mode kubernetes'
+{% if contiv_network_if is defined %}
+{% set np_args = '-vlan-if ' ~ contiv_network_if ~ ' ' ~ np_args %}
+{% endif %}
+
+NETPLUGIN_ARGS={{ np_args }}

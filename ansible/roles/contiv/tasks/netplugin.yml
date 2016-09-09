@@ -47,6 +47,36 @@
   tags:
        - ovs_install
 
+- name: download ovs binaries (debian)
+  get_url:
+    validate_certs: False
+    dest: "{{ item.dest }}"
+    url: "{{ item.url }}"
+  with_items:
+    - {
+        url: "https://cisco.box.com/shared/static/v1dvgoboo5zgqrtn6tu27vxeqtdo2bdl.deb",
+        dest: /tmp/ovs-common.deb
+      }
+    - {
+        url: "https://cisco.box.com/shared/static/ymbuwvt2qprs4tquextw75b82hyaxwon.deb",
+        dest: /tmp/ovs-switch.deb
+      }
+  when: ansible_os_family == "Debian"
+  tags:
+    - ovs_install
+
+- name: install ovs-common (debian)
+  apt: "deb=/tmp/ovs-common.deb"
+  when: ansible_os_family == "Debian"
+  tags:
+    - ovs_install
+
+- name: install ovs (debian)
+  apt: "deb=/tmp/ovs-switch.deb"
+  when: ansible_os_family == "Debian"
+  tags:
+    - ovs_install
+
 - name: install ntp
   yum: name=ntp state=present
   register: ntp_svc
