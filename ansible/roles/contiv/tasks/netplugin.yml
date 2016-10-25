@@ -1,14 +1,23 @@
 - name: ensure pluginDir exists
-  file: path=/usr/libexec/kubernetes/kubelet-plugins/net/exec recurse=yes state=directory
+  file: path="{{ item }}" recurse=yes state=directory
+  with_items:
+    - /usr/libexec/kubernetes/kubelet-plugins/net/exec
+    - /etc/cni/net.d
 
 - name: copy contiv cni conf file
-  copy: src=contiv_cni.conf dest=/usr/libexec/kubernetes/kubelet-plugins/net/exec/contiv_cni.conf
+  copy: src=contiv_cni.conf dest="{{ item }}"
+  with_items:
+    - /usr/libexec/kubernetes/kubelet-plugins/net/exec
+    - /etc/cni/net.d
 
 - name: ensure cni bin dir exists
   file: path=/opt/cni/bin recurse=yes state=directory
 
 - name: copy contiv cni exec file
   copy: src={{ contiv_bin_path }}/contivk8s dest=/opt/cni/bin/contivk8s.bin mode=0755
+
+- name: copy loopback cni plugin
+  copy: src=loopback dest=/opt/cni/bin/loopback mode=0755
 
 - name: ensure contiv config directory exists
   file: path=/opt/contiv/config recurse=yes state=directory
